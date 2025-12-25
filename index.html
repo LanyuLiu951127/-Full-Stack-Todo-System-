@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>專業任務系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+</head>
+<body class="bg-slate-100 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-200">
+
+    <button onclick="toggleDarkMode()" class="fixed top-4 right-4 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition z-50 text-xl">
+        <span class="dark:hidden">🌙</span>
+        <span class="hidden dark:inline">☀️</span>
+    </button>
+
+    <div id="authBox" class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-sm transition-colors duration-200">
+        <h2 id="authTitle" class="text-2xl font-bold mb-6 text-center text-indigo-600 dark:text-indigo-400">任務系統登入</h2>
+        <input type="text" id="user" placeholder="請輸入帳號" class="w-full mb-3 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+        <input type="password" id="pass" placeholder="請輸入密碼" class="w-full mb-6 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+        
+        <!-- 註冊時顯示的安全問題欄位 -->
+        <div id="registerFields" class="hidden mb-4 space-y-3">
+            <select id="regQuestion" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <option value="你的第一隻寵物名字？">你的第一隻寵物名字？</option>
+                <option value="你國小就讀哪所學校？">你國小就讀哪所學校？</option>
+                <option value="你母親的娘家姓氏？">你母親的娘家姓氏？</option>
+            </select>
+            <input type="text" id="regAnswer" placeholder="請輸入安全問題答案" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+        </div>
+
+        <button id="authSubmit" onclick="auth('login')" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition mb-2">登入</button>
+        <button id="authToggle" onclick="toggleAuthMode()" class="w-full text-indigo-600 py-2 font-medium hover:underline">沒有帳號？點此註冊</button>
+        <button id="forgotLink" onclick="toggleResetMode(true)" class="w-full text-gray-500 text-sm mt-2 hover:underline dark:text-gray-400">忘記密碼？</button>
+    </div>
+
+    <!-- 忘記密碼區塊 -->
+    <div id="resetBox" class="hidden bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-sm transition-colors duration-200">
+        <h2 class="text-2xl font-bold mb-6 text-center text-indigo-600 dark:text-indigo-400">重設密碼</h2>
+        <input type="text" id="resetUser" placeholder="請輸入帳號" class="w-full mb-3 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+        <div id="resetStep2" class="hidden space-y-3">
+            <p id="resetQuestionDisplay" class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">問題：...</p>
+            <input type="text" id="resetAnswer" placeholder="請輸入答案" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <input type="password" id="newPass" placeholder="請輸入新密碼" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+        </div>
+        <button id="resetBtn" onclick="handleResetStep1()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition mt-4 mb-2">查詢問題</button>
+        <button onclick="toggleResetMode(false)" class="w-full text-gray-500 py-2 font-medium hover:underline">返回登入</button>
+    </div>
+
+    <div id="mainApp" class="hidden w-full max-w-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden self-start mt-10 transition-colors duration-200">
+        <div class="p-6 bg-indigo-600 text-white flex justify-between items-center">
+            <h1 id="pageTitle" class="text-xl font-bold">我的任務清單</h1>
+            <div class="flex gap-2">
+                <button onclick="showProfile()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-1 rounded-lg text-sm transition">個人資料</button>
+                <button onclick="logout()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-1 rounded-lg text-sm transition">登出</button>
+            </div>
+        </div>
+
+        <div id="todoView">
+        <div class="p-6 bg-indigo-50 dark:bg-gray-700 space-y-4 transition-colors duration-200">
+            <div class="flex gap-2">
+                <select id="searchPriority" onchange="fetchTodos()" class="p-3 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none bg-white dark:bg-gray-600 dark:text-white min-w-[120px]">
+                    <option value="all">全部等級</option>
+                    <option value="高">🔴 高</option>
+                    <option value="中">🟡 中</option>
+                    <option value="低">🟢 低</option>
+                </select>
+                <select id="searchCategory" onchange="fetchTodos()" class="p-3 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none bg-white dark:bg-gray-600 dark:text-white min-w-[120px]">
+                    <option value="all">全部分類</option>
+                    <option value="工作">💼 工作</option>
+                    <option value="生活">🏠 生活</option>
+                    <option value="學習">📚 學習</option>
+                    <option value="其他">📂 其他</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="🔍 搜尋任務內容..." class="flex-1 p-3 rounded-lg border-none shadow-sm focus:ring-2 focus:ring-indigo-400 outline-none dark:bg-gray-600 dark:text-white dark:placeholder-gray-400">
+                <button onclick="fetchTodos()" class="bg-indigo-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-600 shadow-md transition">搜尋</button>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <input type="text" id="todoInput" placeholder="任務名稱..." class="flex-1 min-w-[200px] p-3 rounded-lg border shadow-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 dark:placeholder-gray-400">
+                <input type="date" id="dateInput" class="p-3 rounded-lg border shadow-sm dark:bg-gray-600 dark:text-white dark:border-gray-500">
+                <select id="priorityInput" class="p-3 rounded-lg border shadow-sm dark:bg-gray-600 dark:text-white dark:border-gray-500">
+                    <option value="高">🔴 高優先級</option>
+                    <option value="中" selected>🟡 中優先級</option>
+                    <option value="低">🟢 低優先級</option>
+                </select>
+                <select id="categoryInput" class="p-3 rounded-lg border shadow-sm dark:bg-gray-600 dark:text-white dark:border-gray-500">
+                    <option value="工作">💼 工作</option>
+                    <option value="生活">🏠 生活</option>
+                    <option value="學習">📚 學習</option>
+                    <option value="其他" selected>📂 其他</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <textarea id="memoInput" maxlength="250" placeholder="備註 (選填, 限250字)..." class="flex-1 p-3 rounded-lg border shadow-sm resize-none overflow-y-auto h-12 dark:bg-gray-600 dark:text-white dark:border-gray-500 dark:placeholder-gray-400"></textarea>
+                <button id="submitBtn" onclick="handleSubmit()" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-indigo-700 shadow-md transition">新增</button>
+                <button id="cancelBtn" onclick="resetForm()" class="hidden bg-gray-400 text-white px-6 py-3 rounded-lg font-bold hover:bg-gray-500 shadow-md transition">取消</button>
+            </div>
+        </div>
+
+        <ul id="todoList" class="divide-y divide-gray-100 dark:divide-gray-700 overflow-y-auto max-h-[500px]">
+            </ul>
+        </div>
+
+        <!-- 個人資料頁面 -->
+        <div id="profileView" class="hidden p-8 space-y-6 dark:text-white">
+            <div class="bg-gray-50 dark:bg-gray-700 p-6 rounded-xl">
+                <p class="text-gray-500 dark:text-gray-300 text-sm mb-1">目前登入帳號</p>
+                <p id="profileUsername" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400"></p>
+            </div>
+            
+            <div class="space-y-4">
+                <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-600">修改密碼</h3>
+                <input type="password" id="oldPass" placeholder="請輸入舊密碼" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                <input type="password" id="newPassChange" placeholder="請輸入新密碼" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                <button onclick="changePassword()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">確認修改</button>
+            </div>
+
+            <div class="space-y-4 pt-4 border-t dark:border-gray-600">
+                <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-600">修改安全問題</h3>
+                <input type="password" id="secPass" placeholder="請輸入目前密碼以驗證身分" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                <select id="newQuestion" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                    <option value="你的第一隻寵物名字？">你的第一隻寵物名字？</option>
+                    <option value="你國小就讀哪所學校？">你國小就讀哪所學校？</option>
+                    <option value="你母親的娘家姓氏？">你母親的娘家姓氏？</option>
+                </select>
+                <input type="text" id="newAnswer" placeholder="請輸入新的答案" class="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                <button onclick="changeSecurityQuestion()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">更新安全問題</button>
+                <button onclick="showTodos()" class="w-full text-gray-500 py-2 font-medium hover:underline dark:text-gray-400">返回任務列表</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/api';
+        let currentUser = JSON.parse(localStorage.getItem('user'));
+        let isLoginMode = true;
+        let editingId = null; // 追蹤正在編輯的任務 ID
+        let allTodos = []; // 儲存目前列表資料供編輯使用
+
+        // 初始化深色模式
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('authTitle');
+            const submitBtn = document.getElementById('authSubmit');
+            const toggleBtn = document.getElementById('authToggle');
+            const regFields = document.getElementById('registerFields');
+            const forgotLink = document.getElementById('forgotLink');
+
+            if (isLoginMode) {
+                title.innerText = '任務系統登入';
+                submitBtn.innerText = '登入';
+                submitBtn.onclick = () => auth('login');
+                toggleBtn.innerText = '沒有帳號？點此註冊';
+                regFields.classList.add('hidden');
+                forgotLink.classList.remove('hidden');
+            } else {
+                title.innerText = '註冊新帳號';
+                submitBtn.innerText = '註冊';
+                submitBtn.onclick = () => auth('register');
+                toggleBtn.innerText = '已有帳號？返回登入';
+                regFields.classList.remove('hidden');
+                forgotLink.classList.add('hidden');
+            }
+        }
+
+        function toggleResetMode(show) {
+            document.getElementById('authBox').classList.toggle('hidden', show);
+            document.getElementById('resetBox').classList.toggle('hidden', !show);
+            // 重置重設表單狀態
+            if(show) {
+                document.getElementById('resetStep2').classList.add('hidden');
+                document.getElementById('resetBtn').innerText = '查詢問題';
+                document.getElementById('resetBtn').onclick = handleResetStep1;
+                document.getElementById('resetUser').value = '';
+                document.getElementById('resetUser').disabled = false;
+            }
+        }
+
+        async function handleResetStep1() {
+            const username = document.getElementById('resetUser').value;
+            if(!username) return alert("請輸入帳號");
+
+            const res = await fetch(`${API}/get-question`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                document.getElementById('resetQuestionDisplay').innerText = `🔒 安全問題：${data.question}`;
+                document.getElementById('resetStep2').classList.remove('hidden');
+                document.getElementById('resetUser').disabled = true; // 鎖定帳號欄位
+                
+                const btn = document.getElementById('resetBtn');
+                btn.innerText = '重設密碼';
+                btn.onclick = handleResetStep2;
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function handleResetStep2() {
+            const username = document.getElementById('resetUser').value;
+            const answer = document.getElementById('resetAnswer').value;
+            const newPassword = document.getElementById('newPass').value;
+
+            if(!answer || !newPassword) return alert("請填寫完整資訊");
+
+            const res = await fetch(`${API}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, answer, newPassword })
+            });
+            const data = await res.json();
+
+            if(data.success) {
+                alert("密碼重設成功！請使用新密碼登入。");
+                toggleResetMode(false);
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function auth(type) {
+            const username = document.getElementById('user').value;
+            const password = document.getElementById('pass').value;
+            const question = document.getElementById('regQuestion').value;
+            const answer = document.getElementById('regAnswer').value;
+
+            if(!username || !password) return alert("請填寫帳號密碼");
+            if(type === 'register' && (!question || !answer)) return alert("請設定安全問題與答案");
+            
+            try {
+                const res = await fetch(`${API}/${type}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, question, answer })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (type === 'login') {
+                        currentUser = data.user;
+                        localStorage.setItem('token', data.token); // 儲存 Token
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        checkAuth();
+                    } else {
+                        alert('註冊成功！現在請輸入帳密進行登入');
+                        toggleAuthMode(); // 自動切換回登入模式
+                    }
+                } else alert(data.message);
+            } catch(e) { alert("連線失敗，請檢查後端是否啟動"); }
+        }
+
+        function checkAuth() {
+            if (currentUser) {
+                document.getElementById('authBox').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                fetchTodos();
+            }
+        }
+
+        function logout() { localStorage.removeItem('user'); localStorage.removeItem('token'); location.reload(); }
+
+        function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+        async function fetchTodos() {
+            if(!currentUser) return;
+            const q = document.getElementById('searchInput').value;
+            const priority = document.getElementById('searchPriority').value;
+            const category = document.getElementById('searchCategory').value;
+            const token = localStorage.getItem('token');
+            
+            const list = document.getElementById('todoList');
+            list.innerHTML = '<p class="text-center text-gray-500 p-5">⏳ 載入任務中...</p>';
+
+            try {
+                const res = await fetch(`${API}/todos?q=${q}&priority=${priority}&category=${category}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401 || res.status === 403) return logout(); // Token 失效則登出
+
+                const todos = await res.json();
+                allTodos = todos; // 更新全域資料
+                
+                if (!Array.isArray(todos)) return; // 確保資料格式正確
+
+                const priorityColors = {
+                    '高': 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+                    '中': 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800',
+                    '低': 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
+                };
+
+                const categoryColors = {
+                    '工作': 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+                    '生活': 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+                    '學習': 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
+                    '其他': 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
+                };
+
+                list.innerHTML = todos.map(t => {
+                    const pBadge = priorityColors[t.priority] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+                    const cBadge = categoryColors[t.category] || categoryColors['其他'];
+                    return `
+                <li class="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${t.done ? 'bg-gray-50 dark:bg-gray-700' : ''}">
+                    <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="toggleTodo(${t.id})">
+                        <div class="w-6 h-6 shrink-0 border-2 rounded-full flex items-center justify-center transition ${t.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}">
+                            ${t.done ? '✓' : ''}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 rounded text-xs font-bold border ${cBadge}">${escapeHtml(t.category || '其他')}</span>
+                                <span class="px-2 py-0.5 rounded text-xs font-bold border ${pBadge}">${escapeHtml(t.priority)}</span>
+                                <p class="font-semibold ${t.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-100'}">${escapeHtml(t.text)}</p>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1">📅 ${t.due_date || '無期限'} ${t.memo ? `| 📝 ${escapeHtml(t.memo)}` : ''}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="startEdit(${t.id})" class="text-gray-400 dark:text-gray-500 hover:text-indigo-600 transition px-1">✏️</button>
+                        <button onclick="deleteTodo(${t.id})" class="text-gray-400 dark:text-gray-500 hover:text-red-500 transition px-1">🗑️</button>
+                    </div>
+                </li>
+            `}).join('');
+            } catch (e) {
+                console.error("讀取任務失敗:", e);
+            }
+        }
+
+        async function handleSubmit() {
+            const text = document.getElementById('todoInput');
+            const date = document.getElementById('dateInput');
+            const priority = document.getElementById('priorityInput');
+            const category = document.getElementById('categoryInput');
+            const memo = document.getElementById('memoInput');
+            const token = localStorage.getItem('token');
+            if (!text.value.trim()) return;
+
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '處理中...';
+
+            const url = editingId ? `${API}/todos/${editingId}` : `${API}/todos`;
+            const method = editingId ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ 
+                        text: text.value, 
+                        due_date: date.value, 
+                        priority: priority.value,
+                        memo: memo.value,
+                        category: category.value
+                    })
+                });
+                const data = await res.json();
+                
+                if (!data.success) {
+                    alert(data.message);
+                } else {
+                    resetForm();
+                    fetchTodos();
+                }
+            } catch (e) {
+                alert("連線錯誤");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
+        function startEdit(id) {
+            const todo = allTodos.find(t => t.id === id);
+            if (!todo) return;
+
+            editingId = id;
+            document.getElementById('todoInput').value = todo.text;
+            document.getElementById('dateInput').value = todo.due_date;
+            document.getElementById('priorityInput').value = todo.priority;
+            document.getElementById('categoryInput').value = todo.category || '其他';
+            document.getElementById('memoInput').value = todo.memo || '';
+            
+            document.getElementById('submitBtn').innerText = '更新';
+            document.getElementById('submitBtn').classList.replace('bg-indigo-600', 'bg-green-600');
+            document.getElementById('submitBtn').classList.replace('hover:bg-indigo-700', 'hover:bg-green-700');
+            document.getElementById('cancelBtn').classList.remove('hidden');
+            document.getElementById('todoInput').focus();
+        }
+
+        function resetForm() {
+            editingId = null;
+            document.getElementById('todoInput').value = '';
+            document.getElementById('dateInput').value = '';
+            document.getElementById('priorityInput').value = '中';
+            document.getElementById('categoryInput').value = '其他';
+            document.getElementById('memoInput').value = '';
+            document.getElementById('searchInput').value = ''; 
+            document.getElementById('searchPriority').value = 'all';
+            document.getElementById('searchCategory').value = 'all';
+
+            document.getElementById('submitBtn').innerText = '新增';
+            document.getElementById('submitBtn').classList.replace('bg-green-600', 'bg-indigo-600');
+            document.getElementById('submitBtn').classList.replace('hover:bg-green-700', 'hover:bg-indigo-700');
+            document.getElementById('cancelBtn').classList.add('hidden');
+        }
+
+        async function toggleTodo(id) { 
+            const token = localStorage.getItem('token');
+            await fetch(`${API}/todos/${id}/toggle`, { 
+                method: 'PUT', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                } 
+            }); 
+            fetchTodos(); 
+        }
+        async function deleteTodo(id) { 
+            const token = localStorage.getItem('token');
+            if(confirm('確定刪除？')) { 
+                await fetch(`${API}/todos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); 
+                fetchTodos(); 
+            } 
+        }
+
+        function showProfile() {
+            document.getElementById('todoView').classList.add('hidden');
+            document.getElementById('profileView').classList.remove('hidden');
+            document.getElementById('pageTitle').innerText = '個人資料設定';
+            document.getElementById('profileUsername').innerText = currentUser.username;
+            // 清空輸入框
+            document.getElementById('oldPass').value = '';
+            document.getElementById('newPassChange').value = '';
+            document.getElementById('secPass').value = '';
+            document.getElementById('newAnswer').value = '';
+        }
+
+        function showTodos() {
+            document.getElementById('profileView').classList.add('hidden');
+            document.getElementById('todoView').classList.remove('hidden');
+            document.getElementById('pageTitle').innerText = '我的任務清單';
+        }
+
+        async function changePassword() {
+            const oldPassword = document.getElementById('oldPass').value;
+            const newPassword = document.getElementById('newPassChange').value;
+            const token = localStorage.getItem('token');
+            if(!oldPassword || !newPassword) return alert("請輸入舊密碼與新密碼");
+
+            const res = await fetch(`${API}/change-password`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ oldPassword, newPassword })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert("密碼修改成功！");
+                showTodos(); // 修改成功後返回列表
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function changeSecurityQuestion() {
+            const password = document.getElementById('secPass').value;
+            const newQuestion = document.getElementById('newQuestion').value;
+            const newAnswer = document.getElementById('newAnswer').value;
+            const token = localStorage.getItem('token');
+
+            if(!password || !newQuestion || !newAnswer) return alert("請填寫密碼與新的問題答案");
+
+            const res = await fetch(`${API}/change-security-question`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ password, newQuestion, newAnswer })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert("安全問題修改成功！");
+                document.getElementById('secPass').value = '';
+                document.getElementById('newAnswer').value = '';
+            } else {
+                alert(data.message);
+            }
+        }
+
+        checkAuth();
+    </script>
+</body>
+</html>
